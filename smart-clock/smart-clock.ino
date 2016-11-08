@@ -1,5 +1,5 @@
-#include "myfont.h"
 #include "ledmatrix-max7219-max7221/ledmatrix-max7219-max7221.h"
+#include "icons.h"
 
 #define SECONDS_IN_A_DAY (60 * 60 * 24)
 #define SECONDS_IN_AN_HOUR (60 * 60)
@@ -25,16 +25,25 @@ String text = "Welcome";
 int textLength = text.length();
 // default position of the text is outside and then scrolls left
 int textX = bitmapWidth;
-int fontWidth = 5, space = 1;
+int fontWidth = 5, space = 1, iconWidth = 8, displayHeight = 8;
 
 // draw text
-void drawText(String s, int x)
-{
+void drawText(String s, int x) {
+  led->fillScreen(false);
   int y = 0;
   for(int i = 0; i < s.length(); i++) {
-    // Adafruit_GFX method
     led->drawChar(x + i*(fontWidth+space), y, s[i], true, false, 1);
   }
+}
+
+void drawTextWithIcon(String s, int x) {
+  led->fillScreen(false);
+  int y = 0;
+  for(int i = 0; i < s.length(); i++) {
+    led->drawChar(x + iconWidth + space + i*(fontWidth+space), y, s[i], true, false, 1);
+  }
+  led->fillRect(0, 0, iconWidth + space, displayHeight, false);
+  led->drawBitmap(0, 0, CAR_ICON, iconWidth, displayHeight, true);
 }
 
 // draw symbol of heart
@@ -82,13 +91,11 @@ void loop() {
     }
     case mode_message: {
       if (counter < 2) {
-        drawText(text, textX--);
+        drawTextWithIcon(text, textX--);
         // text animation is ending when the whole text is outside the bitmap
         if (textX < textLength*(fontWidth+space)*(-1)) {
           // set default text position
           textX = bitmapWidth;
-          // turn all pixels off (takes effect after led->flush())
-          led->fillScreen(false);
           counter++;
         }
         led->flush();
