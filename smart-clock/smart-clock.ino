@@ -21,11 +21,12 @@ int numberOfDisplays = 4;
 int bitmapWidth = numberOfDisplays * 8;
 // cycle counter (incremented after each heart drawing)
 int counter = 0;
+String iconName = "message";
 String text = "Welcome";
 int textLength = text.length();
 // default position of the text is outside and then scrolls left
 int textX = bitmapWidth;
-int fontWidth = 5, space = 1, iconWidth = 8, displayHeight = 8;
+int fontWidth = 5, space = 1, iconWidth = 8, iconHeight = 8, displayHeight = 8;
 
 // draw text
 void drawText(String s, int x) {
@@ -36,14 +37,16 @@ void drawText(String s, int x) {
   }
 }
 
-void drawTextWithIcon(String s, int x) {
+void drawTextWithIcon(String s, String iName, int x) {
   led->fillScreen(false);
   int y = 0;
   for(int i = 0; i < s.length(); i++) {
     led->drawChar(x + iconWidth + space + i*(fontWidth+space), y, s[i], true, false, 1);
   }
   led->fillRect(0, 0, iconWidth + space, displayHeight, false);
-  led->drawBitmap(0, 0, CAR_ICON, iconWidth, displayHeight, true);
+  uint8_t icon[8];
+  iconFromName(iName, icon);
+  led->drawBitmap(0, 0, icon, iconWidth, displayHeight, true);
 }
 
 // draw symbol of heart
@@ -58,10 +61,7 @@ void drawHeart() {
 }
 
 void setup() {
-  // setup pins and library
-  // 1 display per row, 1 display per column
-  // optional pin settings - default: CLK = A0, CS = A1, D_OUT = A2
-  // (pin settings is independent on HW SPI)
+  // new LEDMatrix(displays per row, displays per column, CLK, CS, DIN);
   led = new LEDMatrix(numberOfDisplays, 1, A3, A4, A5);
   // > add every matrix in the order in which they have been connected <
   // the first matrix in a row, the first matrix in a column
@@ -91,7 +91,7 @@ void loop() {
     }
     case mode_message: {
       if (counter < 2) {
-        drawTextWithIcon(text, textX--);
+        drawTextWithIcon(text, iconName, textX--);
         // text animation is ending when the whole text is outside the bitmap
         if (textX < textLength*(fontWidth+space)*(-1)) {
           // set default text position
@@ -127,10 +127,10 @@ void loop() {
             int minutesRemaining = secondsRemaining / SECONDS_IN_A_MINUTE;
             secondsRemaining = secondsRemaining - (minutesRemaining * SECONDS_IN_A_MINUTE);
             
-            messageCommand(String::format("It is %d days, %d hours, %d minutes and %d seconds until %s!",
+            messageCommand(String::format("christmastree|It is %d days, %d hours, %d minutes and %d seconds until %s!",
                 daysRemaining, hoursRemaining, minutesRemaining, secondsRemaining, countdownEventDescription.c_str()));
         } else {
-            messageCommand(String::format("It's %s!", countdownEventDescription.c_str()));
+            messageCommand(String::format("christmastree|It's %s!", countdownEventDescription.c_str()));
         }
         break;
     }
@@ -145,11 +145,16 @@ void resetMessage() {
 }
 
 int messageCommand(String command) {
-    text = command;
+    int i = command.indexOf('|',0);
+    if (i > 0) {
+      iconName = command.substring(0, i);
+      text = command.substring(i+1, command.length());
+    } else {
+      iconName = "message";
+      text = command;
+    }
     resetMessage();
     mode = mode_message;
-    led->fillScreen(false);
-    led->flush();
     return 0;
 }
 
@@ -177,3 +182,4 @@ int handleParams(String command) {
   }
   return 1;
 }
+
