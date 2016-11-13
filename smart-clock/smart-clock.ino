@@ -1,3 +1,5 @@
+nclude "clickButton/clickButton.h"
+
 #include "ledmatrix-max7219-max7221/ledmatrix-max7219-max7221.h"
 #include "icons.h"
 
@@ -49,6 +51,9 @@ void drawTextWithIcon(String s, String iName, int x) {
   led->drawBitmap(0, 0, icon, iconWidth, displayHeight, true);
 }
 
+const int buttonPin1 = D0;
+ClickButton button1(buttonPin1, LOW, CLICKBTN_PULLUP);
+
 // draw symbol of heart
 void drawHeart() {
   int x = 1, y = 2;
@@ -61,6 +66,14 @@ void drawHeart() {
 }
 
 void setup() {
+  pinMode(buttonPin1, INPUT_PULLUP);
+
+  // Setup button timers (all in milliseconds / ms)
+  // (These are default if not set, but changeable for convenience)
+  button1.debounceTime   = 20;   // Debounce timer in ms
+  button1.multiclickTime = 250;  // Time limit for multi clicks
+  button1.longClickTime  = 1000; // time until "held-down clicks" register
+  
   // new LEDMatrix(displays per row, displays per column, CLK, CS, DIN);
   led = new LEDMatrix(numberOfDisplays, 1, A3, A4, A5);
   // > add every matrix in the order in which they have been connected <
@@ -77,12 +90,16 @@ void setup() {
 
 String clockFormatBlinkOn = "%H:%M";
 String clockFormatBlinkOff = "%H %M";
-String clockFormat = clockFormatBlinkOn;
 
 int countdownEventTime = 1482649200;
+String countdownEventIcon = "christmastree";
 String countdownEventDescription = "Christmas";
 
 void loop() {
+  button1.Update();
+  if (button1.clicks == 1) {
+      mode = mode_countdown;
+  }
   switch (mode) {
     case mode_off: {
       led->fillScreen(false);
@@ -106,31 +123,22 @@ void loop() {
       break;
     }
     case mode_clock: {
+      String clockFormat = clockFormatBlinkOn;
+      if ((millis() % 1000) > 500) {
+          clockFormat = clockFormatBlinkOff;
+      }
       drawText(Time.format(Time.now(), clockFormat), 1);
       led->flush();
-      if (clockFormat == clockFormatBlinkOn) {
-          clockFormat = clockFormatBlinkOff;
-      } else {
-          clockFormat = clockFormatBlinkOn;
-      }
-      delay(500 - cycleWait);
       break;
     }
     case mode_countdown: {
         int now = Time.now();
         int secondsRemaining = countdownEventTime - now;
         if (secondsRemaining > 0) {
-            int daysRemaining = secondsRemaining / SECONDS_IN_A_DAY;
-            secondsRemaining = secondsRemaining - (daysRemaining * SECONDS_IN_A_DAY);
-            int hoursRemaining = secondsRemaining / SECONDS_IN_AN_HOUR;
-            secondsRemaining = secondsRemaining - (hoursRemaining * SECONDS_IN_AN_HOUR);
-            int minutesRemaining = secondsRemaining / SECONDS_IN_A_MINUTE;
-            secondsRemaining = secondsRemaining - (minutesRemaining * SECONDS_IN_A_MINUTE);
-            
-            messageCommand(String::format("christmastree|It is %d days, %d hours, %d minutes and %d seconds until %s!",
-                daysRemaining, hoursRemaining, minutesRemaining, secondsRemaining, countdownEventDescription.c_str()));
+            int daysRemaining = (secondsRemaining / SECONDS_IN_A_DAY) + 1;
+            messageCommand(String::format("%s|%d more sleeps until %s!", countdownEventIcon.c_str(), daysRemaining, countdownEventDescription.c_str()));
         } else {
-            messageCommand(String::format("christmastree|It's %s!", countdownEventDescription.c_str()));
+            messageCommand(String::format("%s|It's %s!", countdownEventIcon.c_str(), countdownEventDescription.c_str()));
         }
         break;
     }
@@ -182,4 +190,3 @@ int handleParams(String command) {
   }
   return 1;
 }
-
